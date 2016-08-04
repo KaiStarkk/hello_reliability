@@ -9,8 +9,8 @@ ui <- dashboardPage(
   dashboardHeader(title = "Reliability Application"),
   dashboardSidebar(
     sidebarMenu(
-      menuItem("Class Baseline", tabName = "class-baseline", icon = icon("dashboard")),
-      menuItem("Testing Tool", tabName = "testing-tool", icon = icon("heartbeat"), badgeLabel = "beta", badgeColor = "purple")
+      menuItem("Grand Process", tabName = "grand-process", icon = icon("dashboard")),
+      menuItem("Batch Analysis Tool", tabName = "batch-analysis-tool", icon = icon("heartbeat"), badgeLabel = "beta", badgeColor = "purple")
     )
   ),
   dashboardBody(
@@ -19,18 +19,38 @@ ui <- dashboardPage(
     ),
     tabItems(
       tabItem(
-        tabName = "class-baseline",
-        h2("Class Baseline"),
-        fluidRow(
-          infoBox("Distribution Type", "Normal", width = 4, icon = icon("area-chart")),
-          infoBox("Distribution Parameters", p(span(HTML("&mu;"), "= 50"), br(), span(HTML("&sigma;"), "= 100")), icon = icon("info"))
+        tabName = "grand-process",
+        h2("Grand Process"),
+        tabBox(
+          id = "grand-process-tabBox",
+          width = 12,
+          tabPanel(
+            "Overview",
+            fluidRow(
+              infoBox("Grand Process Parameters", p(span(HTML("X&#x33F;"), "= 50"), br(),
+                                                    span(HTML("R&#x305;"), "= 100")
+              ), icon = icon("info-circle")),
+              infoBox("Fitted Distribution Type", "Normal", icon = icon("area-chart")),
+              infoBox("Fitted Distribution Parameters", p(span(HTML("&mu;"), "= 50"), br(), span(HTML("&sigma;"), "= 100")), icon = icon("info"))
+            )
+          ),
+          tabPanel(
+            "Options"
+          )
+        ),
+        box(
+          width = 12,
+          status = "success",
+          h3("Control Chart"),
+          plotOutput("controlChart")
         )
       ),
       tabItem(
-        tabName = "testing-tool",
-        h2("Testing Tool"),
+        tabName = "batch-analysis-tool",
+        h2("Batch Analysis Tool"),
         fluidRow(
           box(
+            status = "primary",
             h3("Upload"),
             fileInput('file1', '',
                       accept = c(
@@ -44,6 +64,7 @@ ui <- dashboardPage(
             )
           ),
           box(
+            status = "info",
             h3("Results"),
             p(span(HTML("&alpha;"))," Value: 0.05"),
             textOutput('contents'),
@@ -70,6 +91,14 @@ server <- function(input, output) {
   # By default, the file size limit is 5MB. It can be changed by
   # setting this option. Here we'll raise limit to 9MB.
   options(shiny.maxRequestSize = 9*1024^2)
+
+  output$controlChart <- renderPlot({
+    x    <- rnorm(1000,50,5)
+    bins <- seq(min(x), max(x), length.out = 20)
+
+    # draw the histogram with the specified number of bins
+    hist(x, main = "", xlab = "X\U305", breaks = bins, col = 'darkgray', border = 'white')
+  })
 
 
   output$contents <- renderText({
