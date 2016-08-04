@@ -1,4 +1,8 @@
-library(shiny)
+dashboardPage(
+  dashboardHeader(),
+  dashboardSidebar(),
+  dashboardBody()
+)
 
 shinyUI(fluidPage(
   titlePanel("Checking samples against a class"),
