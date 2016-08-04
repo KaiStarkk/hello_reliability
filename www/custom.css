@@ -2,6 +2,7 @@
     margin-top: 1em;
 }
 
-.content .box-body {
+.content,
+.box-body {
     padding: 10px 40px;
 }
