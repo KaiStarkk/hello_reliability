@@ -27,10 +27,10 @@ ui <- dashboardPage(
             fluidRow(
               width = NULL,
                   infoBox("Grand Process Parameters", p(span(HTML("X&#x33F;"), "= 50"), br(),
-                                                        span(HTML("R&#x305;"), "= 100")
+                                                        span(HTML("R&#x305;"), "= 10")
                                                         ), icon = icon("info-circle")),
                   infoBox("Fitted Distribution Type", "Normal", icon = icon("area-chart")),
-                  infoBox("Fitted Distribution Parameters", p(span(HTML("&mu;"), "= 50"), br(), span(HTML("&sigma;"), "= 100")), icon = icon("info"))
+                  infoBox("Fitted Distribution Parameters", p(span(HTML("&mu;"), "= 50"), br(), span(HTML("&sigma;"), "= 5")), icon = icon("info"))
             ),
             tabBox(
               width = NULL,
@@ -144,8 +144,8 @@ server <- function(input, output) {
   options(shiny.maxRequestSize = 9*1024^2)
 
   output$controlChart <- renderPlot({
-    peak <- dnorm(popMean, popMean, 5)
-    curve(dnorm(x, popMean, 5), lsl - (popMean-lsl)/2, usl + (usl-popMean)/2, col="darkblue", xlab = "", ylab = "", ylim = c (0, peak*1.1))
+    peak <- dnorm(popMean, popMean, popStdev)
+    curve(dnorm(x, popMean, popStdev), lsl - (popMean-lsl)/2, usl + (usl-popMean)/2, col="darkblue", xlab = "", ylab = "", ylim = c (0, peak*1.1))
     abline(v=lsl, lty=2)
     text(lsl, peak, labels="LSL", pos=4)
     abline(v=usl, lty=2)
@@ -155,7 +155,7 @@ server <- function(input, output) {
   })
 
   output$tableView = renderDataTable(
-    data.frame(Group=1:100, Mean=rnorm(100, popMean, 5), Range=rnorm(100, popRangeMean, 5)),
+    data.frame(Group=1:100, Mean=rnorm(100, popMean, popStdev), Range=rnorm(100, popRangeMean, popStdev)),
     options = list(pageLength = 10)
   )
 
