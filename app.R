@@ -90,11 +90,11 @@ ui <- dashboardPage(
             width = 6,
             column(
               width = 8,
-              textInput("ucl-textInput", "Set UCL", value = "70")
+              textInput("usl-textInput", "Set USL", value = "70")
             ),
             column(
               width = 4,
-              actionButton("ucl-actionButton", "Set")
+              actionButton("usl-actionButton", "Set")
             )
           )
         ),
@@ -103,11 +103,11 @@ ui <- dashboardPage(
             width = 6,
             column(
               width = 8,
-              textInput("lcl-textInput", "Set LCL", value = "30")
+              textInput("lsl-textInput", "Set LSL", value = "30")
             ),
             column(
               width = 4,
-              actionButton("lcl-actionButton", "Set")
+              actionButton("lsl-actionButton", "Set")
             )
           )
         ),
@@ -145,7 +145,7 @@ server <- function(input, output) {
 
   output$controlChart <- renderPlot({
     peak <- dnorm(popMean, popMean, 5)
-    curve(dnorm(x, popMean, 5), popMean - 3*5, popMean + 3*5, col="darkblue", xlab = "", ylab = "", ylim = c (0, peak*1.1))
+    curve(dnorm(x, popMean, 5), lsl - (popMean-lsl)/2, usl + (usl-popMean)/2, col="darkblue", xlab = "", ylab = "", ylim = c (0, peak*1.1))
     abline(v=lsl, lty=2)
     text(lsl, peak, labels="LSL", pos=4)
     abline(v=usl, lty=2)
