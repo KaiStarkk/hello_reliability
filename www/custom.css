@@ -6,3 +6,13 @@
 .box-body {
     padding: 10px 40px;
 }
+
+#ucl-actionButton, #lcl-actionButton {
+    margin-top: 25px;
+}
+
+.btn-danger {
+    color: #fff;
+    background-color: #d9534f;
+    border-color: #d43f3a;
+}

@@ -9,8 +9,8 @@ ui <- dashboardPage(
   dashboardHeader(title = "Reliability Application"),
   dashboardSidebar(
     sidebarMenu(
-      menuItem("Grand Process", tabName = "grand-process", icon = icon("dashboard")),
-      menuItem("Batch Analysis Tool", tabName = "batch-analysis-tool", icon = icon("heartbeat"), badgeLabel = "beta", badgeColor = "purple")
+      menuItem("Grand Process Analysis", tabName = "grand-process-analysis", icon = icon("dashboard"), badgeLabel = "beta", badgeColor = "purple"),
+      menuItem("Settings", tabName = "settings", icon = icon("gears"))
     )
   ),
   dashboardBody(
@@ -19,62 +19,104 @@ ui <- dashboardPage(
     ),
     tabItems(
       tabItem(
-        tabName = "grand-process",
-        h2("Grand Process"),
-        tabBox(
-          id = "grand-process-tabBox",
-          width = 12,
-          tabPanel(
-            "Overview",
+        tabName = "grand-process-analysis",
+        h2("Grand Process Analysis"),
+        fluidRow(
+          column(
+            width = 8,
             fluidRow(
-              infoBox("Grand Process Parameters", p(span(HTML("X&#x33F;"), "= 50"), br(),
-                                                    span(HTML("R&#x305;"), "= 100")
-              ), icon = icon("info-circle")),
-              infoBox("Fitted Distribution Type", "Normal", icon = icon("area-chart")),
-              infoBox("Fitted Distribution Parameters", p(span(HTML("&mu;"), "= 50"), br(), span(HTML("&sigma;"), "= 100")), icon = icon("info"))
+              width = NULL,
+                  infoBox("Grand Process Parameters", p(span(HTML("X&#x33F;"), "= 50"), br(),
+                                                        span(HTML("R&#x305;"), "= 100")
+                                                        ), icon = icon("info-circle")),
+                  infoBox("Fitted Distribution Type", "Normal", icon = icon("area-chart")),
+                  infoBox("Fitted Distribution Parameters", p(span(HTML("&mu;"), "= 50"), br(), span(HTML("&sigma;"), "= 100")), icon = icon("info"))
+            ),
+            tabBox(
+              width = NULL,
+              id = "grand-process-tabBox",
+              tabPanel(
+                "Control Chart",
+                plotOutput("controlChart",
+                           click = "plot_click",
+                           dblclick = "plot_dblclick",
+                           hover = "plot_hover",
+                           brush = "plot_brush")
+                ),
+              tabPanel(
+                "Table View",
+                dataTableOutput('tableView')
+              )
             )
           ),
-          tabPanel(
-            "Options"
+          column(
+            width = 4,
+            box(
+              width = NULL,
+              title = "Upload Samples",
+              "Select a group or group-set in csv format.",
+              fileInput('file1', '',
+                        accept = c(
+                          'text/csv',
+                          'text/comma-separated-values',
+                          'text/tab-separated-values',
+                          'text/plain',
+                          '.csv',
+                          '.tsv'
+                        )
+              )
+            ),
+            box(
+              width = NULL,
+              h3("Results"),
+              p(span(HTML("&alpha;"))," Value: 0.05"),
+              textOutput('contents'),
+              fluidRow(
+                valueBoxOutput("cpkBox", width = 6),
+                valueBoxOutput("totalAreaPercentageBox", width = 6)
+              ),
+              div(textOutput('good'),style="color:green"),
+              div(textOutput('bad'),style="color:red"),
+              textOutput('defPercentage')
+            )
           )
-        ),
-        box(
-          width = 12,
-          status = "success",
-          h3("Control Chart"),
-          plotOutput("controlChart")
         )
       ),
       tabItem(
-        tabName = "batch-analysis-tool",
-        h2("Batch Analysis Tool"),
+        tabName = "settings",
+        h2("Settings"),
         fluidRow(
           box(
-            status = "primary",
-            h3("Upload"),
-            fileInput('file1', '',
-                      accept = c(
-                        'text/csv',
-                        'text/comma-separated-values',
-                        'text/tab-separated-values',
-                        'text/plain',
-                        '.csv',
-                        '.tsv'
-                      )
-            )
-          ),
-          box(
-            status = "info",
-            h3("Results"),
-            p(span(HTML("&alpha;"))," Value: 0.05"),
-            textOutput('contents'),
-            fluidRow(
-              valueBoxOutput("cpkBox"),
-              valueBoxOutput("totalAreaPercentageBox")
+            width = 6,
+            column(
+              width = 8,
+              textInput("ucl-textInput", "Set UCL", value = "70")
             ),
-            div(textOutput('good'),style="color:green"),
-            div(textOutput('bad'),style="color:red"),
-            textOutput('defPercentage')
+            column(
+              width = 4,
+              actionButton("ucl-actionButton", "Set")
+            )
+          )
+        ),
+        fluidRow(
+          box(
+            width = 6,
+            column(
+              width = 8,
+              textInput("lcl-textInput", "Set LCL", value = "30")
+            ),
+            column(
+              width = 4,
+              actionButton("lcl-actionButton", "Set")
+            )
+          )
+        ),
+        fluidRow(
+          box(
+            width = 12, height = 200, status = "danger", solidHeader = TRUE, title = "Danger Zone!",
+            h3("Reset Grand Process"),
+            p("This will delete all sample and group data. Please back up all required information before proceeding."),
+            actionButton("reset-grand-process-actionButton", "Delete", class="btn-danger")
           )
         )
       )
@@ -88,17 +130,34 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
 
+  #Set the initial characteristics of the GP
+  popMean <- 50
+  popRangeMean <- 10
+  popStdev <- 5
+
+  #Set the upper and lower limits
+  lsl <- 30
+  usl <- 70
+
   # By default, the file size limit is 5MB. It can be changed by
   # setting this option. Here we'll raise limit to 9MB.
   options(shiny.maxRequestSize = 9*1024^2)
 
   output$controlChart <- renderPlot({
-    x    <- rnorm(1000,50,5)
-    bins <- seq(min(x), max(x), length.out = 20)
-
-    # draw the histogram with the specified number of bins
-    hist(x, main = "", xlab = "X\U305", breaks = bins, col = 'darkgray', border = 'white')
+    peak <- dnorm(popMean, popMean, 5)
+    curve(dnorm(x, popMean, 5), popMean - 3*5, popMean + 3*5, col="darkblue", xlab = "", ylab = "", ylim = c (0, peak*1.1))
+    abline(v=lsl, lty=2)
+    text(lsl, peak, labels="LSL", pos=4)
+    abline(v=usl, lty=2)
+    text(usl, peak, labels="USL", pos=2)
+    arrows(popMean, 0, popMean, peak, 0, lty=4)
+    text(popMean, peak, labels="X\U33F", pos=3)
   })
+
+  output$tableView = renderDataTable(
+    data.frame(Group=1:100, Mean=rnorm(100, popMean, 5), Range=rnorm(100, popRangeMean, 5)),
+    options = list(pageLength = 10)
+  )
 
 
   output$contents <- renderText({
@@ -112,13 +171,6 @@ server <- function(input, output) {
 
     if (is.null(inFile))
       return(NULL)
-
-    popMean <- 50
-    popRangeMean <- 40
-
-    #Set the upper and lower limits
-    lsl <- 40
-    usl <- 60
 
     #Read in the new sample
     inputData <- read.csv(inFile$datapath)
