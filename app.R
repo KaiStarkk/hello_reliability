@@ -68,7 +68,7 @@ ui <- dashboardPage(
             ),
             box(
               width = NULL,
-              h3("Results"),
+              title = "Results",
               p(span(HTML("&alpha;"))," Value: 0.05"),
               textOutput('contents'),
               fluidRow(
