@@ -46,7 +46,7 @@ secondCheck <- function(gpAve, sampleMeans, zoneDf){
 }
 
 
-#Rule 2: Out of 5 consecutive points, 4 consecutive points lie in zone A
+#Rule 2: Out of 5 consecutive points, 4 consecutive points lie in zone A or B
 thirdCheck <- function(gpAve, sampleMeans, zoneDf){
   
   #Ensure we have enough points to run this test
@@ -59,12 +59,14 @@ thirdCheck <- function(gpAve, sampleMeans, zoneDf){
     triggered <- 0
     for(j in i:i+4){
       #Are we in the upper zone A?
-      if(!(in.interval.lo(sampleMeans[j],zoneDf$B[1],zoneDf$A[1]))){
+      if(!(in.interval.lo(sampleMeans[j],zoneDf$B[1],zoneDf$A[1])) ||
+         !(in.interval.lo(sampleMeans[j],zoneDf$C[1],zoneDf$B[1]))){
         triggered <- triggered + 1
       }
       
       #Are we in the lower zone A? 
-      else if(!(in.interval.lo(sampleMeans[j],zoneDf$A[2],zoneDf$B[2]))){
+      else if(!(in.interval.lo(sampleMeans[j],zoneDf$A[2],zoneDf$B[2])) ||
+              !(in.interval.lo(sampleMeans[j],zoneDf$B[2],zoneDf$C[2]))){
         triggered <- triggered + 1
       }
       else{
