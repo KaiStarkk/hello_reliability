@@ -74,7 +74,7 @@ ui <- dashboardPage(
               width = NULL,
               tabPanel(
                 "Add Samples",
-                p("Add samples groups one by one."),
+                p("Add sample groups one by one."),
                 textInput("addSampleTextInput", "Sample Value", "0"),
                 actionButton("addSampleActionButton", "Add Sample To Group", icon = icon("plus")),
                 br(),br(),
