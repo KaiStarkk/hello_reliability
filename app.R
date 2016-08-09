@@ -202,9 +202,9 @@ server <- function(input, output) {
 
     #Plot LCL and UCL
     abline(h=lcl, lty=2, col="red")
-    text(lcl, labels="LCL", pos=4)
+    text(lcl, labels="LCL", pos=1)
     abline(h=ucl, lty=2, col="red")
-    text(ucl, labels="UCL", pos=4)
+    text(ucl, labels="UCL", pos=3)
 
     #Plot the zones
     abline(h=zoneDf$C[1], lty=3, col="blue")
@@ -213,14 +213,14 @@ server <- function(input, output) {
     abline(h=zoneDf$B[1], lty=3, col="blue")
     abline(h=zoneDf$B[2], lty=3, col="blue")
 
-    text(gpAve + zoneDistance/2, labels="Zone C", pos=4)
-    text(gpAve - zoneDistance/2, labels="Zone C", pos=4)
+    text(gpAve + zoneDistance/2, labels="Zone C")
+    text(gpAve - zoneDistance/2, labels="Zone C")
 
-    text(gpAve + 1.5*zoneDistance, labels="Zone B", pos=4)
-    text(gpAve - 1.5*zoneDistance, labels="Zone B", pos=4)
+    text(gpAve + 1.5*zoneDistance, labels="Zone B")
+    text(gpAve - 1.5*zoneDistance, labels="Zone B")
 
-    text(gpAve + 2.5*zoneDistance, labels="Zone A", pos=4)
-    text(gpAve - 2.5*zoneDistance, labels="Zone A", pos=4)
+    text(gpAve + 2.5*zoneDistance, labels="Zone A")
+    text(gpAve - 2.5*zoneDistance, labels="Zone A")
   })
 
   loadedGroup <- reactiveValues(data=data.frame(Point=numeric(0)))
