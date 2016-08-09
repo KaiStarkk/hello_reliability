@@ -223,7 +223,7 @@ server <- function(input, output) {
     text(gpAve - 2.5*zoneDistance, labels="Zone A", pos=4)
   })
 
-  loadedGroup <- reactiveValues(data=NULL)
+  loadedGroup <- reactiveValues(data=data.frame(Point=numeric(0)))
 
   #Create eventhandlers for actionButtons
   observeEvent(input$addSampleActionButton, {
@@ -239,7 +239,7 @@ server <- function(input, output) {
   })
 
   observeEvent(input$clearGroupActionButton, {
-    loadedGroup$data = NULL
+    loadedGroup$data = data.frame(Point=data.frame(Point=numeric(0)))
   })
 
   addedGroup <- eventReactive(input$addGroupActionButton, {
@@ -353,7 +353,7 @@ server <- function(input, output) {
     #for ucl, lower tail false
     #for lcl, lower tail true
 
-    loadedGroup = NULL
+    loadedGroup$data = data.frame(Point=numeric(0))
 
   })
 }
