@@ -272,7 +272,7 @@ server <- function(input, output) {
 
     inFile <- input$file1
 
-    if (is.null(inFile) && is.null(inGroup)) {
+    if (is.null(inFile) && (is.null(inGroup) || length(inGroup) == 0)) {
       return(NULL)
     } else if (!(is.null(inFile))) {
       #Read in the new sample
@@ -280,7 +280,7 @@ server <- function(input, output) {
       newSample <- inputData[,2]
     } else if (!(is.null(inGroup))) {
       newSample <- inGroup
-      loadedGroup$data = NULL
+      loadedGroup$data = data.frame(Point=numeric(0))
     }
 
     #Calculate the stats associated with the new sample
@@ -352,8 +352,6 @@ server <- function(input, output) {
     #use p norm
     #for ucl, lower tail false
     #for lcl, lower tail true
-
-    loadedGroup$data = data.frame(Point=numeric(0))
 
   })
 }
