@@ -1,0 +1,42 @@
+.progress {
+    margin-top: 1em;
+}
+
+.content,
+.box-body {
+    padding: 10px 40px;
+}
+
+.nav-tabs-custom>.tab-content {
+    padding: 20px 40px;
+}
+
+#usl-actionButton, #lsl-actionButton {
+    margin-top: 25px;
+}
+
+.btn-danger {
+    color: #fff!important;
+    background-color: #d9534f!important;
+    border-color: #d43f3a!important;
+}
+
+.btn-danger:hover {
+    background-color: #d73925!important;
+    border-color: #ac2925!important;
+}
+
+.btn-info {
+    color: #fff!important;
+    background-color: #00c0ef!important;
+    border-color: #00acd6!important;
+}
+
+.btn-info:hover {
+    background-color: #00acd6!important;
+    border-color: #269abc!important;
+}
+
+#helpButton {
+    margin-left: 15px;
+}
