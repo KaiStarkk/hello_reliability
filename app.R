@@ -16,30 +16,31 @@ ui <- dashboardPage(
     sidebarMenu(
       menuItem("Process Analysis", tabName = "process-analysis", icon = icon("dashboard"), badgeLabel = "beta", badgeColor = "purple"),
       menuItem("Settings", tabName = "settings", icon = icon("gears")),
+      useShinyjs(),
       actionButton("helpButton", "Help", icon = icon("question-circle"), class="btn-info")
     )
   ),
 
   dashboardBody(
-    useShinyjs(),
     tags$head(
       tags$link(rel = "stylesheet", href = "css/custom.css"),
-      tags$link(rel = "stylesheet", href = "css/bootstrap-tour.min.css"),
-      tags$head(tags$script(src="js/bootstrap-tour.min.js", type="text/javascript")),
-      tags$head(tags$script('$(document).ready(function() {
-                                var tour = new Tour({
-                                  steps: [
-                                  {
-                                    title: "Walkthrough",
-                                    content: "This will be a walkthrough very soon!"
-                                  }
-                                  ],
-                                  orphan: true,
-                                  backdrop: true
-                                });
-                                tour.init();
-                                tour.start();
-                            });',
+      tags$link(rel = "stylesheet", href = "css/bootstrap-tour-standalone.min.css"),
+      tags$head(tags$script(src="js/bootstrap-tour-standalone.min.js", type="text/javascript")),
+      tags$head(tags$script('$(document).ready(function {
+                                                    var tour = new Tour({
+                                                      steps: [
+                                                        {
+                                                        title: "Walkthrough",
+                                                        content: "This will be a walkthrough very soon!"
+                                                        }
+                                                      ],
+                                                      orphan: true,
+                                                      backdrop: true,
+                                                      storage: false
+                                                    });
+                                                    tour.init();
+                                                    tour.start();
+                                                });',
                             type='text/javascript'))
     ),
 
@@ -142,8 +143,21 @@ ui <- dashboardPage(
 server <- function(input, output) {
 
   observeEvent(input$helpButton, {
-    runjs("tour.init();")
-    runjs("tour.start();")
+    runjs('
+          var tour = new Tour({
+            steps: [
+            {
+            title: "Walkthrough",
+            content: "This will be a walkthrough very soon!"
+            }
+            ],
+            orphan: true,
+            backdrop: true,
+            storage: false
+          });
+          tour.init();
+          tour.start();
+          ')
   })
 
   # By default, the file size limit is 5MB. It can be changed by
