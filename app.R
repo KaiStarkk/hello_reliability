@@ -43,7 +43,7 @@ ui <- dashboardPage(
                                                         title: "Process Information",
                                                         placement: "bottom",
                                                         onShow: function(tour) {if($(window).width() < 750) {$(document.body).addClass("sidebar-collapse");$(document.body).removeClass("sidebar-open")}},
-                                                        content: "Information about the process baseline is show in this panel. You can choose between chart and table view with the tab bar."
+                                                        content: "Information about the process baseline is shown in this panel. You can choose between chart and table view with the tab bar."
                                                         },
                                                         {
                                                         element: "#shiny-tab-process-analysis .col-sm-4",
