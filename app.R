@@ -75,8 +75,9 @@ ui <- dashboardPage(
               tabPanel(
                 "Add Samples",
                 p("Add sample groups one by one."),
-                textInput("addSampleTextInput", "Sample Value", "0"),
-                actionButton("addSampleActionButton", "Add Sample To Group", icon = icon("plus")),
+                textInput("addSampleTextInput", "Sample Value"),
+                actionButton("groupSampleActionButton", "Add Sample To Group", icon = icon("plus")),
+                actionButton("addSampleActionButton", "Add Sample To Process", icon = icon("plus")),
                 br(),br(),
                 strong("Group:"),
                 br(),
@@ -160,6 +161,8 @@ server <- function(input, output) {
           ')
   })
 
+  added <- NULL
+
   # By default, the file size limit is 5MB. It can be changed by
   # setting this option. Here we'll raise limit to 9MB.
   options(shiny.maxRequestSize = 9*1024^2)
@@ -168,7 +171,8 @@ server <- function(input, output) {
   voltages <- as.data.frame(replicate(4, rnorm(10,mean=1.31,sd=0.05)))
 
   #Calculate X'' and R
-  sampleMeans <-rowMeans(voltages)
+  sampleMeans <- rowMeans(voltages)
+  lineGraph <- reactiveValues(data=rowMeans(voltages))
   gpAve <- mean(sampleMeans)
 
   maxMinList <- rowRanges(as.matrix(voltages))
@@ -193,18 +197,21 @@ server <- function(input, output) {
   #Render the SPC Chart
   output$SPCChart <- renderPlot({
 
+    xmin <- -length(lineGraph$data)/7
+
     #Plot X' with a clear centreline, dotted lines for each zone and a dashed line for UCL and LCL
-    plot(sampleMeans, type = "b", ylab = "Average of each sample", xlab = "Sample", ylim = c(lcl-0.01,ucl+0.01))
+    plot(lineGraph$data, type = "b", ylab = "Average of each sample", xlab = "Sample", xlim=c(xmin,length(lineGraph$data)),
+         ylim = c(min(min(lineGraph$data),lcl)-0.01,max(max(lineGraph$data),ucl)+0.01), xaxt='n', ann=FALSE)
 
     #Plot the centreline
     abline(h=gpAve, lty=4, col="green")
-    text(gpAve, labels="Process Average", pos=4)
+    text(xmin*7/10, gpAve, labels="Process Average")
 
     #Plot LCL and UCL
     abline(h=lcl, lty=2, col="red")
-    text(lcl, labels="LCL", pos=1)
+    text(xmin*7/10, lcl, labels="LCL", pos=1)
     abline(h=ucl, lty=2, col="red")
-    text(ucl, labels="UCL", pos=3)
+    text(xmin*7/10, ucl, labels="UCL", pos=3)
 
     #Plot the zones
     abline(h=zoneDf$C[1], lty=3, col="blue")
@@ -213,38 +220,63 @@ server <- function(input, output) {
     abline(h=zoneDf$B[1], lty=3, col="blue")
     abline(h=zoneDf$B[2], lty=3, col="blue")
 
-    text(gpAve + zoneDistance/2, labels="Zone C")
-    text(gpAve - zoneDistance/2, labels="Zone C")
+    text(xmin*7/10, gpAve + zoneDistance/2, labels="Zone C")
+    text(xmin*7/10, gpAve - zoneDistance/2, labels="Zone C")
 
-    text(gpAve + 1.5*zoneDistance, labels="Zone B")
-    text(gpAve - 1.5*zoneDistance, labels="Zone B")
+    text(xmin*7/10, gpAve + 1.5*zoneDistance, labels="Zone B")
+    text(xmin*7/10, gpAve - 1.5*zoneDistance, labels="Zone B")
 
-    text(gpAve + 2.5*zoneDistance, labels="Zone A")
-    text(gpAve - 2.5*zoneDistance, labels="Zone A")
+    text(xmin*7/10, gpAve + 2.5*zoneDistance, labels="Zone A")
+    text(xmin*7/10, gpAve - 2.5*zoneDistance, labels="Zone A")
   })
 
   loadedGroup <- reactiveValues(data=data.frame(Point=numeric(0)))
 
   #Create eventhandlers for actionButtons
-  observeEvent(input$addSampleActionButton, {
-    addSampleContents <- as.numeric(as.character(input$addSampleTextInput))
-    if(!is.null(addSampleContents) && !is.na(addSampleContents)) {
-      loadedGroup$data <- rbind(data.frame(Point=as.numeric(as.character(loadedGroup$data[,1]))),data.frame(Point=addSampleContents))
+
+  #"Add sample to group" button
+  observeEvent(input$groupSampleActionButton, {
+    groupSampleContents <- as.numeric(as.character(input$addSampleTextInput))
+    if(!is.null(groupSampleContents) && !is.na(groupSampleContents)) {
+      loadedGroup$data <- rbind(data.frame(Point=as.numeric(as.character(loadedGroup$data[,1]))),data.frame(Point=groupSampleContents))
     }
   })
 
+  #"Remove sample from group" button
   observeEvent(input$removeSamplesActionButton, {
     remaining <- data.frame(Point=loadedGroup$data[!rownames(loadedGroup$data) %in% input$addGroupTable_rows_selected,])
     loadedGroup$data <- remaining
   })
 
+  #"Clear group" button
   observeEvent(input$clearGroupActionButton, {
     loadedGroup$data = data.frame(Point=data.frame(Point=numeric(0)))
   })
 
-  addedGroup <- eventReactive(input$addGroupActionButton, {
-    if (is.null(loadedGroup$data)) return(NULL)
-    data.frame(Point=as.numeric(as.character(loadedGroup$data[,1])))
+  addedSample <- reactiveValues(data=NULL)
+  addedGroup <- reactiveValues(data=NULL)
+
+  #"Add sample to process" button
+  observeEvent(input$addSampleActionButton, {
+    addSampleContents <- as.numeric(as.character(input$addSampleTextInput))
+    if(!(is.null(addSampleContents) || is.na(addSampleContents))) {
+      added <<- "sample"
+      addedSample$data <- NULL
+      addedSample$data <- addSampleContents
+    } else {
+      return(NULL)
+    }
+  })
+
+  #"Add group to process" button
+  observeEvent(input$addGroupActionButton, {
+    if (!is.null(loadedGroup$data)) {
+      added <<- "group"
+      addedGroup$data <- NULL
+      addedGroup$data <- data.frame(Point=as.numeric(as.character(loadedGroup$data[,1])))
+    } else {
+      return(NULL)
+    }
   })
 
   #Render the DataTables
@@ -254,8 +286,11 @@ server <- function(input, output) {
   )
 
   output$addGroupTable <- DT::renderDataTable(server = TRUE,escape=F,options = list(paging = FALSE, searching = FALSE),{
-    if (is.null(loadedGroup$data)) return(NULL)
-    loadedGroup$data
+    if (is.null(loadedGroup$data)) {
+      data.frame(Point=numeric(0))
+    } else {
+      loadedGroup$data
+    }
   })
 
   tableViewProxy <- DT::dataTableProxy('tableView')
@@ -268,19 +303,25 @@ server <- function(input, output) {
     # column will contain the local filenames where the data can
     # be found.
 
-    inGroup <- addedGroup()[,1]
+    inSample <- addedSample$data
+
+    inGroup <- addedGroup$data[,1]
 
     inFile <- input$file1
 
-    if (is.null(inFile) && (is.null(inGroup) || length(inGroup) == 0)) {
-      return(NULL)
-    } else if (!(is.null(inFile))) {
-      #Read in the new sample
-      inputData <- read.csv(inFile$datapath)
-      newSample <- inputData[,2]
-    } else if (!(is.null(inGroup))) {
+    if (!is.null(added) && added=="sample" && !(is.null(inSample) || length(inSample)!=1)) {
+      added <<- NULL
+      newSample <- inSample
+    } else if (!is.null(added) && added=="group" && !(is.null(inGroup) || length(inGroup)<1)) {
+      added <<- NULL
       newSample <- inGroup
       loadedGroup$data = data.frame(Point=numeric(0))
+    } else if (is.null(added) && !is.null(inFile)) {
+      inputData <- read.csv(inFile$datapath)
+      newSample <- inputData[,2]
+    } else {
+      added <<- NULL
+      return(NULL)
     }
 
     #Calculate the stats associated with the new sample
@@ -290,9 +331,9 @@ server <- function(input, output) {
     stDevOptions <- c(1,1.128,1.693,2.059,2.326,2.534,2.704,2.847,2.970,3.078)
     sampleStDev <- stDevOptions[sampleSize]
 
-    #Update the population stats
-    gpAve <- (gpAve + sampleMean)/2
-    rangeAve <- (rangeAve + sampleRange)/2
+    #Update SPC chart
+    newGraph <- c(isolate(lineGraph$data), sampleMean)
+    lineGraph$data <- newGraph
 
     #Calculate the process capability indices
     cpl <- (gpAve - lcl)/(3 * sampleStDev)
