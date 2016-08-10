@@ -129,33 +129,21 @@ fourthCheck <- function(gpAve, sampleMeans, zoneDf){
 fifthCheck <- function(gpAve, sampleMeans, zoneDf){
   
   #Ensure we have enough points to run this test
-  if(nrow(sampleMeans)<6)
+  if(length(sampleMeans)<6)
   {
     return(0)
   }
   
-  for(i in 1:(nrow(sampleMeans)-5)){ 
-    consecutivePoints <- 0
+  for(i in 1:(length(sampleMeans)-5)){ 
+    
+    setToCheck <- sampleMeans[i:(i+5)] 
     
     #Are we increasing?
-    for(j in i:i+5){
-      if(sampleMeans[j]<sample[j+1]){
-        consecutivePoints <- consecutivePoints + 1      
-      }
-    }
-    if(consecutivePoints==6){
+    if(all(setToCheck == cummax(setToCheck))){
       return(i)
     }
-    
-    consecutivePoints <- 0
-    
     #Are we decreasing?
-    for(j in i:i+5){
-      if(sampleMeans[j]>sampleMeans[j+1]){
-        consecutivePoints <- consecutivePoints + 1      
-      }
-    }
-    if(consecutivePoints==6){
+    if(all(setToCheck == cummin(setToCheck))){
       return(i)
     }
   }
@@ -166,32 +154,34 @@ fifthCheck <- function(gpAve, sampleMeans, zoneDf){
 sixthCheck <- function(gpAve, sampleMeans, zoneDf){
   
   #Ensure we have enough points to run this test
-  if(nrow(sampleMeans)<14)
+  if(length(sampleMeans)<14)
   {
     return(0)
   }
   
-  for(i in 2:(nrow(sampleMeans)-13)){ #Start at the second point
-    consecutivePoints <- 0 
+  for(i in 2:(length(sampleMeans)-12)){ #Skip the first and last point
+    #The way we do our checks, we start at point 2. So if point 3 follows the correct pattern, we would have
+    #gained 3 consecutive points. So start the counter at 2
+    consecutivePoints <- 2 
     
     #
-    for(j in i:i+14){
+    for(j in i:(i+11)){ #Again, avoid going to the last value
+      print(paste("j",j))
       #Up and down
-      if(sampleMeans[j-1]<sampleMeans[j] && sampleMeans[j]<sampleMeans[j+1]){
-        consecutivePoints <- consecutivePoints + 1    
+      if(sampleMeans[j-1]<sampleMeans[j] && sampleMeans[j]>sampleMeans[j+1]){
+        consecutivePoints <- consecutivePoints + 1
       }
       #Down and up
-      else if(sampleMeans[j-1]>sampleMeans[j] && sampleMeans[j]>sampleMeans[j+1]){
+      else if(sampleMeans[j-1]>sampleMeans[j] && sampleMeans[j]<sampleMeans[j+1]){
         consecutivePoints <- consecutivePoints + 1
       }
       #We had a set of 3 points without oscillation, go back to the first loop and start again
       else{
         break
       }
- 
     }
-    if(consecutivePoints==15){
-      return(i)
+    if(consecutivePoints==14){
+      return(i-1) #Since we started checking at the second point, the set really started one before
     }
   }
   return(0)
@@ -201,27 +191,25 @@ sixthCheck <- function(gpAve, sampleMeans, zoneDf){
 seventhCheck <- function(gpAve, sampleMeans, zoneDf){
   
   #Ensure we have enough points to run this test
-  if(nrow(sampleMeans)<15)
+  if(length(sampleMeans)<15)
   {
     return(0)
   }
   
-  for(i in 1:(nrow(sampleMeans)-14)){ 
+  for(i in 1:(length(sampleMeans)-14)){ 
     consecutivePoints <- 0 
     
     
-    for(j in i:i+14){
-      #Are we not in upper C?
-      if(!(in.interval.lo(sampleMeans[j], zoneDf$B[1], zoneDf$C[1]  ))){
-        break
+    for(j in i:(i+14)){
+      #Are we in upper or lower C
+      if((in.interval.lo(sampleMeans[j], gpAve, zoneDf$C[1])) ||
+         (in.interval.lo(sampleMeans[j], zoneDf$C[2], gpAve   ))){
+        consecutivePoints <- consecutivePoints + 1
+        #print("in interval")
       }
-      #Are we not in lower C?
-      else if(!(in.interval.lo(sampleMeans[j], zoneDf$C[2], zoneDf$B[2]  ))){
-        break
-      }
-      #We were in zone C
+      #We found a single point that wasn't in C so don't bother checking the whole set
       else{
-        consecutivePoints <- consecutivePoints +1
+        break 
       }
     }
     
