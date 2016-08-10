@@ -58,8 +58,7 @@ ui <- dashboardPage(
                                                     });
                                                     tour.init();
                                                     tour.start();
-                                                }
-                            $(document).ready(showTour());',
+                                                }',
                             type='text/javascript')))
     ),
 
