@@ -41,3 +41,20 @@
     margin-left: 75px;
     margin-top: 10px;
 }
+
+.tour-backdrop,
+.tour-step-background {
+    z-index: 900!important;
+}
+
+.main-sidebar.tour-step-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding-top: 50px;
+    z-index: 901!important;
+}
+
+#step-1 {
+    top: 10px!important;
+}

@@ -17,7 +17,7 @@ ui <- dashboardPage(
       menuItem("Process Analysis", tabName = "process-analysis", icon = icon("dashboard"), badgeLabel = "beta", badgeColor = "purple"),
       menuItem("Settings", tabName = "settings", icon = icon("gears")),
       useShinyjs(),
-      actionButton("helpButton", "Help", icon = icon("question-circle"), class="btn-info")
+      actionButton("helpButton", "Help", icon = icon("question-circle"), class="btn-info", onclick="showTour();")
     )
   ),
 
@@ -26,12 +26,30 @@ ui <- dashboardPage(
       tags$link(rel = "stylesheet", href = "css/custom.css"),
       tags$link(rel = "stylesheet", href = "css/bootstrap-tour-standalone.min.css"),
       tags$head(tags$script(src="js/bootstrap-tour-standalone.min.js", type="text/javascript")),
-      tags$head(tags$script('$(document).ready(function {
+      tags$head(tags$script(HTML('function showTour() {
                                                     var tour = new Tour({
                                                       steps: [
                                                         {
-                                                        title: "Walkthrough",
-                                                        content: "This will be a walkthrough very soon!"
+                                                        title: "Welcome",
+                                                        content: "Welcome to the Reliability Application"
+                                                        },
+                                                        {
+                                                        element: ".main-sidebar",
+                                                        title: "Navigation",
+                                                        content: "This navtray allows you to move between different sections of the application. The default section is Process Analysis."
+                                                        },
+                                                        {
+                                                        element: "#shiny-tab-process-analysis .col-sm-8",
+                                                        title: "Process Information",
+                                                        placement: "bottom",
+                                                        onShow: function(tour) {if($(window).width() < 750) {$(document.body).addClass("sidebar-collapse");$(document.body).removeClass("sidebar-open")}},
+                                                        content: "Information about the process baseline is show in this panel. You can choose between chart and table view with the tab bar."
+                                                        },
+                                                        {
+                                                        element: "#shiny-tab-process-analysis .col-sm-4",
+                                                        title: "Adding Data",
+                                                        placement: "left",
+                                                        content: "Here you can add data to the process. The first tab allows manual addition of samples and groups, and the second facilitates batch uploading."
                                                         }
                                                       ],
                                                       orphan: true,
@@ -40,8 +58,9 @@ ui <- dashboardPage(
                                                     });
                                                     tour.init();
                                                     tour.start();
-                                                });',
-                            type='text/javascript'))
+                                                }
+                            $(document).ready(showTour());',
+                            type='text/javascript')))
     ),
 
     tabItems(
@@ -142,24 +161,6 @@ ui <- dashboardPage(
 ## ------------------------------
 
 server <- function(input, output) {
-
-  observeEvent(input$helpButton, {
-    runjs('
-          var tour = new Tour({
-            steps: [
-            {
-            title: "Walkthrough",
-            content: "This will be a walkthrough very soon!"
-            }
-            ],
-            orphan: true,
-            backdrop: true,
-            storage: false
-          });
-          tour.init();
-          tour.start();
-          ')
-  })
 
   added <- NULL
 
