@@ -132,7 +132,13 @@ ui <- dashboardPage(
               ),
               div(textOutput('good'),style="color:green"),
               div(textOutput('bad'),style="color:red"),
-              textOutput('defPercentage')
+              textOutput('firstCheckDisplay'),
+              textOutput('secondCheckDisplay'),
+              textOutput('thirdCheckDisplay'),
+              textOutput('fourthCheckDisplay'),
+              textOutput('fifthCheckDisplay'),
+              textOutput('sixthCheckDisplay'),
+              textOutput('seventhCheckDisplay')
             )
           )
         )
@@ -393,32 +399,46 @@ server <- function(input, output) {
       checkDetails <-""
       
       if(checkResults[1]>0){
-        firstCheckDetail <- paste("Point",checkResults[1],"is outside your control limits")
-        checkDetails <- paste(checkDetails,firstCheckDetail, sep = "\n")
+        output$firstCheckDisplay <- renderText({paste("Point",checkResults[1],"is outside your control limits")})
       }
-      if(checkResults[2]){
-        secondCheckDetail <- paste("Point",checkResults[2],"marks the start of 3 consecutive points within which 2 are in Zone A")
-        checkDetails <- paste(checkDetails,secondCheckDetail, sep = "\n")
+      else{
+        output$firstCheckDisplay <- renderText({""})
       }
-      if(checkResults[3]){
-        thirdCheckDetail <- paste("Point",checkResults[3],"marks the start of 5 consecutive points within which 4 are in Zone A or B")
-        checkDetails <- paste(checkDetails,thirdCheckDetail, sep = "\n")
+      if(checkResults[2]>0){
+        output$secondCheckDisplay <- renderText({paste("Point",checkResults[2],"marks the start of 3 consecutive points within which 2 are in Zone A")})
       }
-      if(checkResults[4]){
-        fourthCheckDetail <- paste("Point",checkResults[4],"marks the start of 9 consecutive points that lie on a one side of the average")
-        checkDetails <- paste(checkDetails,fourthCheckDetail, sep = "\n")
+      else{
+        output$secondCheckDisplay <- renderText({""})
       }
-      if(checkResults[5]){
-        fifthCheckDetail <- paste("Point",checkResults[5],"marks the start of 6 consecutive points that are monotonically increasing or decreasing")
-        checkDetails <- paste(checkDetails,fifthCheckDetail, sep = "\n")
+      if(checkResults[3]>0){
+        output$thirdCheckDisplay <- renderText({paste("Point",checkResults[3],"marks the start of 5 consecutive points within which 4 are in Zone A or B")})
       }
-      if(checkResults[6]){
-        sixthCheckDetail <- paste("Point",checkResults[6],"marks the start of 14 consecutive points that oscillate")
-        checkDetails <- paste(checkDetails,sixthCheckDetail, sep = "\n")
+      else{
+        output$thirdCheckDisplay <- renderText({""})
       }
-      if(checkResults[7]){
-        seventhCheckDetail <- paste("Point",checkResults[7],"marks the start of 15 consecutive points that lie in Zone C")
-        checkDetails <- paste(checkDetails,seventhCheckDetail, sep = "\n")
+      if(checkResults[4]>0){
+        output$fourthCheckDisplay <- renderText({paste("Point",checkResults[4],"marks the start of 9 consecutive points that lie on a one side of the average")})
+      }
+      else{
+        output$fourthCheckDisplay <- renderText({""})
+      }
+      if(checkResults[5]>0){
+        output$fifthCheckDisplay <- renderText({paste("Point",checkResults[5],"marks the start of 6 consecutive points that are monotonically increasing or decreasing")})
+      }
+      else{
+        output$fifthCheckDisplay <- renderText({""})
+      }
+      if(checkResults[6]>0){
+        output$sixthCheckDisplay <- renderText({paste("Point",checkResults[6],"marks the start of 14 consecutive points that oscillate")})
+      }
+      else{
+        output$sixthCheckDisplay <- renderText({""})
+      }
+      if(checkResults[7]>0){
+        output$seventhCheckDisplay <- renderText({paste("Point",checkResults[7],"marks the start of 15 consecutive points that lie in Zone C")})
+      }
+      else{
+        output$seventhCheckDisplay <- renderText({""})
       }
       
       output$defPercentage <- renderText({capture.output(cat(checkDetails))})
