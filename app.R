@@ -167,7 +167,7 @@ ui <- dashboardPage(
 ## ------------------------------
 
 server <- function(input, output) {
-  
+
   ##Load in our helpder functions
   source("controlChecks.R")
 
@@ -322,9 +322,35 @@ server <- function(input, output) {
     # column will contain the local filenames where the data can
     # be found.
 
+
+    numberOfTriggers <- 0
+    output$cpkBox <- renderValueBox({
+      valueBox(
+        numberOfTriggers, "Triggered Checks", icon = icon("hashtag"), #Round used to take cpk as
+        if(numberOfTriggers){
+          color = "red"
+        }
+        else
+        {
+          color="green"
+        }
+      )
+    })
+
     #Check that a grand process is actually loaded
     if (!loaded) {
       output$errorLine <- renderUI({HTML(paste("No process is currently loaded.", "Navigate to the settings page to upload the baseline data.","","", sep = '<br/>'))})
+      output$bad <- renderText({""})
+      output$defPercentage <- renderText({""})
+      output$good <- renderText({""})
+      checkResults <- vector(mode="integer", length=7)
+      output$firstCheckDisplay <- renderText({""})
+      output$secondCheckDisplay <- renderText({""})
+      output$thirdCheckDisplay <- renderText({""})
+      output$fourthCheckDisplay <- renderText({""})
+      output$fifthCheckDisplay <- renderText({""})
+      output$sixthCheckDisplay <- renderText({""})
+      output$seventhCheckDisplay <- renderText({""})
       return(NULL)
     }
 
@@ -358,7 +384,7 @@ server <- function(input, output) {
     #Update SPC chart
     newGraph <- c(isolate(lineGraph$data), sampleMean)
     lineGraph$data <- newGraph
-    
+
     #Run the checks
     checkResults <- vector(mode="integer", length=7)
     checkResults[1] <- firstCheck(gpAve = gpAve, sampleMeans = lineGraph$data, zoneDf = zoneDf)
@@ -368,7 +394,7 @@ server <- function(input, output) {
     checkResults[5] <- fifthCheck(gpAve = gpAve, sampleMeans = lineGraph$data, zoneDf = zoneDf)
     checkResults[6] <- sixthCheck(gpAve = gpAve, sampleMeans = lineGraph$data, zoneDf = zoneDf)
     checkResults[7] <- seventhCheck(gpAve = gpAve, sampleMeans = lineGraph$data, zoneDf = zoneDf)
-    
+
     numberOfTriggers <- nnzero(checkResults)
 
     #Render valueBoxes
@@ -376,7 +402,7 @@ server <- function(input, output) {
     output$cpkBox <- renderValueBox({
       valueBox(
         numberOfTriggers, "Triggered Checks", icon = icon("hashtag"), #Round used to take cpk as
-        if(numberOfTriggers){ 
+        if(numberOfTriggers){
           color = "red"
         }
         else
@@ -389,7 +415,7 @@ server <- function(input, output) {
     #output$totalAreaPercentageBox <- renderValueBox({
      # valueBox(
       #  "","Check Details", icon = icon("percent"),
-       # if(numberOfTriggers){ 
+       # if(numberOfTriggers){
         #  color = "red"
         #}
         #else
@@ -403,20 +429,20 @@ server <- function(input, output) {
     #Tell the user if the process is out of control or not
     if(numberOfTriggers==0){ #Fake for now
       displayMessage <- "Your process is in control"
-      output$bad <- renderText({displayMessage})
-      output$good <- renderText({""})
+      output$bad <- renderText({""})
+      output$good <- renderText({displayMessage})
       output$defPercentage <- renderText({""})
     }
     else{
       displayMessage <- "Your process is out of control"
       output$bad <- renderText({displayMessage})
       output$good <- renderText({""})
-      
+
       #Provide details
       checkDetailsHeader <- "Here are the details"
-      
+
       checkDetails <-""
-      
+
       if(checkResults[1]>0){
         output$firstCheckDisplay <- renderText({paste("Point",checkResults[1],"is outside your control limits")})
       }
@@ -459,11 +485,11 @@ server <- function(input, output) {
       else{
         output$seventhCheckDisplay <- renderText({""})
       }
-      
+
       output$defPercentage <- renderText({capture.output(cat(checkDetails))})
     }
 
-    
+
 
     contentsMessage <- ""
 
