@@ -92,6 +92,7 @@ ui <- dashboardPage(
               width = NULL,
               tabPanel(
                 "Add Samples",
+                div(htmlOutput('errorLine'),style="color:red"),
                 p("Add sample groups one by one."),
                 textInput("addSampleTextInput", "Sample Value"),
                 actionButton("groupSampleActionButton", "Add Sample To Group", icon = icon("plus")),
@@ -144,9 +145,9 @@ ui <- dashboardPage(
         fluidRow(
           box(
             width = 12, height = 200, status = "danger", solidHeader = TRUE, title = "Danger Zone!",
-            h3("Reset Grand Process"),
+            h3("Clear Grand Process"),
             p("This will delete all sample and group data. Please back up all required information before proceeding."),
-            actionButton("reset-grand-process-actionButton", "Delete", class="btn-danger")
+            actionButton("resetGrandProcessActionButton", "Clear", class="btn-danger")
           )
         )
       )
@@ -161,7 +162,8 @@ ui <- dashboardPage(
 
 server <- function(input, output) {
 
-  added <- NULL
+  added <- NULL #String containing the type of data most recently added to the grand process
+  loaded <- TRUE #Boolean value, determines whether or not the baseline process parameters and data are loaded
 
   # By default, the file size limit is 5MB. It can be changed by
   # setting this option. Here we'll raise limit to 9MB.
@@ -196,38 +198,40 @@ server <- function(input, output) {
 
   #Render the SPC Chart
   output$SPCChart <- renderPlot({
+    if (!is.null(lineGraph$data)) {
 
-    xmin <- -length(lineGraph$data)/7
+      xmin <- -length(lineGraph$data)/7
 
-    #Plot X' with a clear centreline, dotted lines for each zone and a dashed line for UCL and LCL
-    plot(lineGraph$data, type = "b", ylab = "Average of each sample", xlab = "Sample", xlim=c(xmin,length(lineGraph$data)),
-         ylim = c(min(min(lineGraph$data),lcl)-0.01,max(max(lineGraph$data),ucl)+0.01), xaxt='n', ann=FALSE)
+      #Plot X' with a clear centreline, dotted lines for each zone and a dashed line for UCL and LCL
+      plot(lineGraph$data, type = "b", ylab = "Average of each sample", xlab = "Sample", xlim=c(xmin,length(lineGraph$data)),
+           ylim = c(min(min(lineGraph$data),lcl)-0.01,max(max(lineGraph$data),ucl)+0.01), xaxt='n', ann=FALSE)
 
-    #Plot the centreline
-    abline(h=gpAve, lty=4, col="green")
-    text(xmin*7/10, gpAve, labels="Process Average")
+      #Plot the centreline
+      abline(h=gpAve, lty=4, col="green")
+      text(xmin*7/10, gpAve, labels="Process Average")
 
-    #Plot LCL and UCL
-    abline(h=lcl, lty=2, col="red")
-    text(xmin*7/10, lcl, labels="LCL", pos=1)
-    abline(h=ucl, lty=2, col="red")
-    text(xmin*7/10, ucl, labels="UCL", pos=3)
+      #Plot LCL and UCL
+      abline(h=lcl, lty=2, col="red")
+      text(xmin*7/10, lcl, labels="LCL", pos=1)
+      abline(h=ucl, lty=2, col="red")
+      text(xmin*7/10, ucl, labels="UCL", pos=3)
 
-    #Plot the zones
-    abline(h=zoneDf$C[1], lty=3, col="blue")
-    abline(h=zoneDf$C[2], lty=3, col="blue")
+      #Plot the zones
+      abline(h=zoneDf$C[1], lty=3, col="blue")
+      abline(h=zoneDf$C[2], lty=3, col="blue")
 
-    abline(h=zoneDf$B[1], lty=3, col="blue")
-    abline(h=zoneDf$B[2], lty=3, col="blue")
+      abline(h=zoneDf$B[1], lty=3, col="blue")
+      abline(h=zoneDf$B[2], lty=3, col="blue")
 
-    text(xmin*7/10, gpAve + zoneDistance/2, labels="Zone C")
-    text(xmin*7/10, gpAve - zoneDistance/2, labels="Zone C")
+      text(xmin*7/10, gpAve + zoneDistance/2, labels="Zone C")
+      text(xmin*7/10, gpAve - zoneDistance/2, labels="Zone C")
 
-    text(xmin*7/10, gpAve + 1.5*zoneDistance, labels="Zone B")
-    text(xmin*7/10, gpAve - 1.5*zoneDistance, labels="Zone B")
+      text(xmin*7/10, gpAve + 1.5*zoneDistance, labels="Zone B")
+      text(xmin*7/10, gpAve - 1.5*zoneDistance, labels="Zone B")
 
-    text(xmin*7/10, gpAve + 2.5*zoneDistance, labels="Zone A")
-    text(xmin*7/10, gpAve - 2.5*zoneDistance, labels="Zone A")
+      text(xmin*7/10, gpAve + 2.5*zoneDistance, labels="Zone A")
+      text(xmin*7/10, gpAve - 2.5*zoneDistance, labels="Zone A")
+    }
   })
 
   loadedGroup <- reactiveValues(data=data.frame(Point=numeric(0)))
@@ -279,6 +283,12 @@ server <- function(input, output) {
     }
   })
 
+  #"Clear Grand Process" button
+  observeEvent(input$resetGrandProcessActionButton, {
+    lineGraph$data <- NULL
+    loaded <<- FALSE
+  })
+
   #Render the DataTables
   output$tableView = DT::renderDataTable(
     data.frame(Mean=round(sampleMeans, digits = 3), Range=round(sampleRanges, digits = 3)),
@@ -303,6 +313,12 @@ server <- function(input, output) {
     # column will contain the local filenames where the data can
     # be found.
 
+    #Check that a grand process is actually loaded
+    if (!loaded) {
+      output$errorLine <- renderUI({HTML(paste("No process is currently loaded.", "Navigate to the settings page to upload the baseline data.","","", sep = '<br/>'))})
+      return(NULL)
+    }
+
     inSample <- addedSample$data
 
     inGroup <- addedGroup$data[,1]
@@ -323,6 +339,9 @@ server <- function(input, output) {
       added <<- NULL
       return(NULL)
     }
+
+    #Clear previous errors
+    output$errorLine <- renderText({""})
 
     #Calculate the stats associated with the new sample
     sampleMean <- mean(newSample)
