@@ -12,7 +12,7 @@ library(DT)
 
 ui <- dashboardPage(
   dashboardHeader(title = "Reliability Application"),
-
+  
   dashboardSidebar(
     sidebarMenu(
       menuItem("Process Analysis", tabName = "process-analysis", icon = icon("dashboard"), badgeLabel = "beta", badgeColor = "purple"),
@@ -21,7 +21,7 @@ ui <- dashboardPage(
       actionButton("helpButton", "Help", icon = icon("question-circle"), class="btn-info", onclick="showTour();")
     )
   ),
-
+  
   dashboardBody(
     tags$head(
       tags$link(rel = "stylesheet", href = "css/custom.css"),
@@ -60,11 +60,11 @@ ui <- dashboardPage(
                                                     tour.init();
                                                     tour.start();
                                                 }',
-                            type='text/javascript')))
+                                 type='text/javascript')))
     ),
-
+    
     tabItems(
-
+      
       tabItem(
         tabName = "process-analysis",
         h2("Process Analysis"),
@@ -144,7 +144,7 @@ ui <- dashboardPage(
           )
         )
       ),
-
+      
       tabItem(
         tabName = "settings",
         h2("Settings"),
@@ -155,9 +155,28 @@ ui <- dashboardPage(
             p("This will delete all sample and group data. Please back up all required information before proceeding."),
             actionButton("resetGrandProcessActionButton", "Clear", class="btn-danger")
           )
+        ),
+        fluidRow(
+          box(
+            width = 12, height = 220, status = "primary", solidHeader = TRUE, title = "Reset Base Class",
+            h3("Upload Good Class"),
+            p("This will upload a file that is then used to reset the base class against which all future samples are checked."),
+            textOutput('fileHelperHolder'),
+            fileInput('file1', 'Choose file to upload',
+                      accept = c(
+                        'text/csv',
+                        'text/comma-separated-values',
+                        'text/tab-separated-values',
+                        'text/plain',
+                        '.csv',
+                        '.tsv'
+                      )
+            )
+          )
         )
+        
       )
-
+      
     )
   )
 )
@@ -167,86 +186,122 @@ ui <- dashboardPage(
 ## ------------------------------
 
 server <- function(input, output) {
-
+  
   ##Load in our helpder functions
   source("controlChecks.R")
-
+  
   added <- NULL #String containing the type of data most recently added to the grand process
   loaded <- TRUE #Boolean value, determines whether or not the baseline process parameters and data are loaded
-
+  
   # By default, the file size limit is 5MB. It can be changed by
   # setting this option. Here we'll raise limit to 9MB.
   options(shiny.maxRequestSize = 9*1024^2)
-
+  
   #Load in our big dataset (For now,generate a fake dataset )
   voltages <- as.data.frame(replicate(4, rnorm(10,mean=1.31,sd=0.05)))
-
+  
   #Calculate X'' and R
   sampleMeans <- rowMeans(voltages)
   lineGraph <- reactiveValues(data=rowMeans(voltages))
   gpAve <- mean(sampleMeans)
-
+  
   maxMinList <- rowRanges(as.matrix(voltages))
   sampleRanges <- maxMinList[,2]-maxMinList[,1]
   rangeAve<- mean(sampleRanges)
-
+  
   #Calculate UCL and LCL
   a2 <- 0.729
   ucl <- gpAve + a2*rangeAve
   lcl <- gpAve - a2*rangeAve
-
+  
   #Determine the intervals for each zone. Store in a dataframe for easy reference later on
   zoneDistance <- (ucl - gpAve)/3
-
+  
   cZones <- c(gpAve + zoneDistance, gpAve - zoneDistance)
   bZones <- c(gpAve + 2*zoneDistance, gpAve - 2*zoneDistance)
   aZones <- c(ucl, lcl)
-
+  
   zoneDf <- data.frame(cZones,bZones,aZones)
   colnames(zoneDf) <- c('C', 'B', 'A')
-
+  
+  #Recalculate our 'globals' in the event a new file was uploaded
+  output$fileHelperHolder <- renderText({
+    inFile <- input$file1
+    if (is.null(inFile)){
+      return(NULL)
+    }
+    #There is a file? Recalculate then
+    baseLineFile <- read.csv(inFile$datapath, header = input$header,
+             sep = input$sep, quote = input$quote)
+    baseLineData <- baseLineFile[,2]
+    
+    gpAve <- mean(baseLineData[,2])
+    maxMinList <- range(baseLineData[,2])
+    rangeAve <- maxMinList[2]-maxMinList[1]
+    
+    #Calculate UCL and LCL
+    a2 <- 0.729
+    ucl <- gpAve + a2*rangeAve
+    lcl <- gpAve - a2*rangeAve
+    
+    #Determine the intervals for each zone. Store in a dataframe for easy reference later on
+    zoneDistance <- (ucl - gpAve)/3
+    
+    cZones <- c(gpAve + zoneDistance, gpAve - zoneDistance)
+    bZones <- c(gpAve + 2*zoneDistance, gpAve - 2*zoneDistance)
+    aZones <- c(ucl, lcl)
+    
+    zoneDf <- data.frame(cZones,bZones,aZones)
+    colnames(zoneDf) <- c('C', 'B', 'A')
+    
+    lineGraph$data <- ""
+    placeHolder <- ""
+  })
+  
+  
+  
   #Render the SPC Chart
   output$SPCChart <- renderPlot({
     if (!is.null(lineGraph$data)) {
-
+      
       xmin <- -length(lineGraph$data)/7
-
+      
       #Plot X' with a clear centreline, dotted lines for each zone and a dashed line for UCL and LCL
       plot(lineGraph$data, type = "b", ylab = "Average of each sample", xlab = "Sample", xlim=c(xmin,length(lineGraph$data)),
            ylim = c(min(min(lineGraph$data),lcl)-0.01,max(max(lineGraph$data),ucl)+0.01), xaxt='n', ann=FALSE)
-
+      
       #Plot the centreline
       abline(h=gpAve, lty=4, col="green")
       text(xmin*7/10, gpAve, labels="Process Average")
-
+      
       #Plot LCL and UCL
       abline(h=lcl, lty=2, col="red")
       text(xmin*7/10, lcl, labels="LCL", pos=1)
       abline(h=ucl, lty=2, col="red")
       text(xmin*7/10, ucl, labels="UCL", pos=3)
-
+      
       #Plot the zones
       abline(h=zoneDf$C[1], lty=3, col="blue")
       abline(h=zoneDf$C[2], lty=3, col="blue")
-
+      
       abline(h=zoneDf$B[1], lty=3, col="blue")
       abline(h=zoneDf$B[2], lty=3, col="blue")
-
+      
       text(xmin*7/10, gpAve + zoneDistance/2, labels="Zone C")
       text(xmin*7/10, gpAve - zoneDistance/2, labels="Zone C")
-
+      
       text(xmin*7/10, gpAve + 1.5*zoneDistance, labels="Zone B")
       text(xmin*7/10, gpAve - 1.5*zoneDistance, labels="Zone B")
-
+      
       text(xmin*7/10, gpAve + 2.5*zoneDistance, labels="Zone A")
       text(xmin*7/10, gpAve - 2.5*zoneDistance, labels="Zone A")
     }
   })
-
+  
   loadedGroup <- reactiveValues(data=data.frame(Point=numeric(0)))
-
+  
   #Create eventhandlers for actionButtons
-
+  
   #"Add sample to group" button
   observeEvent(input$groupSampleActionButton, {
     groupSampleContents <- as.numeric(as.character(input$addSampleTextInput))
@@ -254,21 +309,21 @@ server <- function(input, output) {
       loadedGroup$data <- rbind(data.frame(Point=as.numeric(as.character(loadedGroup$data[,1]))),data.frame(Point=groupSampleContents))
     }
   })
-
+  
   #"Remove sample from group" button
   observeEvent(input$removeSamplesActionButton, {
     remaining <- data.frame(Point=loadedGroup$data[!rownames(loadedGroup$data) %in% input$addGroupTable_rows_selected,])
     loadedGroup$data <- remaining
   })
-
+  
   #"Clear group" button
   observeEvent(input$clearGroupActionButton, {
     loadedGroup$data = data.frame(Point=data.frame(Point=numeric(0)))
   })
-
+  
   addedSample <- reactiveValues(data=NULL)
   addedGroup <- reactiveValues(data=NULL)
-
+  
   #"Add sample to process" button
   observeEvent(input$addSampleActionButton, {
     addSampleContents <- as.numeric(as.character(input$addSampleTextInput))
@@ -280,7 +335,7 @@ server <- function(input, output) {
       return(NULL)
     }
   })
-
+  
   #"Add group to process" button
   observeEvent(input$addGroupActionButton, {
     if (!is.null(loadedGroup$data)) {
@@ -291,19 +346,25 @@ server <- function(input, output) {
       return(NULL)
     }
   })
-
+  
   #"Clear Grand Process" button
   observeEvent(input$resetGrandProcessActionButton, {
     lineGraph$data <- NULL
     loaded <<- FALSE
   })
-
+  
+  #"Upload Good Class" button
+  observeEvent(input$uploadGoodClassActionButton, {
+    lineGraph$data <- NULL
+    loaded <<- FALSE
+  })
+  
   #Render the DataTables
   output$tableView = DT::renderDataTable(
     data.frame(Mean=round(sampleMeans, digits = 3), Range=round(sampleRanges, digits = 3)),
     options = list(pageLength = 10, pagingType = "full", searching = FALSE)
   )
-
+  
   output$addGroupTable <- DT::renderDataTable(server = TRUE,escape=F,options = list(paging = FALSE, searching = FALSE),{
     if (is.null(loadedGroup$data)) {
       data.frame(Point=numeric(0))
@@ -311,18 +372,18 @@ server <- function(input, output) {
       loadedGroup$data
     }
   })
-
+  
   tableViewProxy <- DT::dataTableProxy('tableView')
   addGroupTableProxy <- DT::dataTableProxy('addGroupTable')
-
+  
   output$contents <- renderText({
     # input$file1 will be NULL initially. After the user selects
     # and uploads a file, it will be a data frame with 'name',
     # 'size', 'type', and 'datapath' columns. The 'datapath'
     # column will contain the local filenames where the data can
     # be found.
-
-
+    
+    
     numberOfTriggers <- 0
     output$cpkBox <- renderValueBox({
       valueBox(
@@ -336,7 +397,7 @@ server <- function(input, output) {
         }
       )
     })
-
+    
     #Check that a grand process is actually loaded
     if (!loaded) {
       output$errorLine <- renderUI({HTML(paste("No process is currently loaded.", "Navigate to the settings page to upload the baseline data.","","", sep = '<br/>'))})
@@ -353,13 +414,13 @@ server <- function(input, output) {
       output$seventhCheckDisplay <- renderText({""})
       return(NULL)
     }
-
+    
     inSample <- addedSample$data
-
+    
     inGroup <- addedGroup$data[,1]
-
+    
     inFile <- input$file1
-
+    
     if (!is.null(added) && added=="sample" && !(is.null(inSample) || length(inSample)!=1)) {
       added <<- NULL
       newSample <- inSample
@@ -374,17 +435,17 @@ server <- function(input, output) {
       added <<- NULL
       return(NULL)
     }
-
+    
     #Clear previous errors
     output$errorLine <- renderText({""})
-
+    
     #Calculate the stats associated with the new sample
     sampleMean <- mean(newSample)
-
+    
     #Update SPC chart
     newGraph <- c(isolate(lineGraph$data), sampleMean)
     lineGraph$data <- newGraph
-
+    
     #Run the checks
     checkResults <- vector(mode="integer", length=7)
     checkResults[1] <- firstCheck(gpAve = gpAve, sampleMeans = lineGraph$data, zoneDf = zoneDf)
@@ -394,9 +455,9 @@ server <- function(input, output) {
     checkResults[5] <- fifthCheck(gpAve = gpAve, sampleMeans = lineGraph$data, zoneDf = zoneDf)
     checkResults[6] <- sixthCheck(gpAve = gpAve, sampleMeans = lineGraph$data, zoneDf = zoneDf)
     checkResults[7] <- seventhCheck(gpAve = gpAve, sampleMeans = lineGraph$data, zoneDf = zoneDf)
-
+    
     numberOfTriggers <- nnzero(checkResults)
-
+    
     #Render valueBoxes
     #This is the 'Process Capability' box
     output$cpkBox <- renderValueBox({
@@ -413,19 +474,19 @@ server <- function(input, output) {
     })
     #This is the 'Defect Probability' box
     #output$totalAreaPercentageBox <- renderValueBox({
-     # valueBox(
-      #  "","Check Details", icon = icon("percent"),
-       # if(numberOfTriggers){
-        #  color = "red"
-        #}
-        #else
-        #{
-          #color="green"
-        #}
-      #)
+    # valueBox(
+    #  "","Check Details", icon = icon("percent"),
+    # if(numberOfTriggers){
+    #  color = "red"
+    #}
+    #else
+    #{
+    #color="green"
+    #}
+    #)
     #})
-
-
+    
+    
     #Tell the user if the process is out of control or not
     if(numberOfTriggers==0){ #Fake for now
       displayMessage <- "Your process is in control"
@@ -437,12 +498,12 @@ server <- function(input, output) {
       displayMessage <- "Your process is out of control"
       output$bad <- renderText({displayMessage})
       output$good <- renderText({""})
-
+      
       #Provide details
       checkDetailsHeader <- "Here are the details"
-
+      
       checkDetails <-""
-
+      
       if(checkResults[1]>0){
         output$firstCheckDisplay <- renderText({paste("Point",checkResults[1],"is outside your control limits")})
       }
@@ -485,15 +546,15 @@ server <- function(input, output) {
       else{
         output$seventhCheckDisplay <- renderText({""})
       }
-
+      
       output$defPercentage <- renderText({capture.output(cat(checkDetails))})
     }
-
-
-
+    
+    
+    
     contentsMessage <- ""
-
-
+    
+    
   })
 }
 
