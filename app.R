@@ -28,40 +28,40 @@ ui <- dashboardPage(
       tags$link(rel = "stylesheet", href = "css/bootstrap-tour-standalone.min.css"),
       tags$head(tags$script(src="js/bootstrap-tour-standalone.min.js", type="text/javascript")),
       tags$head(tags$script(HTML('function showTour() {
-                                                    var tour = new Tour({
-                                                      steps: [
-                                                        {
-                                                        title: "Welcome",
-                                                        content: "Welcome to the Reliability Application"
-                                                        },
-                                                        {
-                                                        element: ".main-sidebar",
-                                                        title: "Navigation",
-                                                        content: "This navtray allows you to move between different sections of the application. The default section is Process Analysis."
-                                                        },
-                                                        {
-                                                        element: "#shiny-tab-process-analysis .col-sm-8",
-                                                        title: "Process Information",
-                                                        placement: "bottom",
-                                                        onShow: function(tour) {if($(window).width() < 750) {$(document.body).addClass("sidebar-collapse");$(document.body).removeClass("sidebar-open")}},
-                                                        content: "Information about the process baseline is shown in this panel. You can choose between chart and table view with the tab bar."
-                                                        },
-                                                        {
-                                                        element: "#shiny-tab-process-analysis .col-sm-4",
-                                                        title: "Adding Data",
-                                                        placement: "left",
-                                                        content: "Here you can add data to the process. The first tab allows manual addition of samples and groups, and the second facilitates batch uploading."
-                                                        }
-                                                      ],
-                                                      orphan: true,
-                                                      backdrop: true,
-                                                      storage: false
-                                                    });
-                                                    tour.init();
-                                                    tour.start();
-                                                }',
-                                 type='text/javascript')))
-    ),
+                                 var tour = new Tour({
+                                 steps: [
+                                 {
+                                 title: "Welcome",
+                                 content: "Welcome to the Reliability Application"
+                                 },
+                                 {
+                                 element: ".main-sidebar",
+                                 title: "Navigation",
+                                 content: "This navtray allows you to move between different sections of the application. The default section is Process Analysis."
+                                 },
+                                 {
+                                 element: "#shiny-tab-process-analysis .col-sm-8",
+                                 title: "Process Information",
+                                 placement: "bottom",
+                                 onShow: function(tour) {if($(window).width() < 750) {$(document.body).addClass("sidebar-collapse");$(document.body).removeClass("sidebar-open")}},
+                                 content: "Information about the process baseline is shown in this panel. You can choose between chart and table view with the tab bar."
+                                 },
+                                 {
+                                 element: "#shiny-tab-process-analysis .col-sm-4",
+                                 title: "Adding Data",
+                                 placement: "left",
+                                 content: "Here you can add data to the process. The first tab allows manual addition of samples and groups, and the second facilitates batch uploading."
+                                 }
+                                 ],
+                                 orphan: true,
+                                 backdrop: true,
+                                 storage: false
+                                 });
+                                 tour.init();
+                                 tour.start();
+                                 }',
+                                   type='text/javascript')))
+      ),
     
     tabItems(
       
@@ -158,11 +158,11 @@ ui <- dashboardPage(
         ),
         fluidRow(
           box(
-            width = 12, height = 220, status = "primary", solidHeader = TRUE, title = "Reset Base Class",
+            width = 12, height = 250, status = "primary", solidHeader = TRUE, title = "Reset Base Class",
             h3("Upload Good Class"),
             p("This will upload a file that is then used to reset the base class against which all future samples are checked."),
             textOutput('fileHelperHolder'),
-            fileInput('file1', 'Choose file to upload',
+            fileInput('file2', 'Choose file to upload',
                       accept = c(
                         'text/csv',
                         'text/comma-separated-values',
@@ -178,8 +178,8 @@ ui <- dashboardPage(
       )
       
     )
-  )
-)
+      )
+      )
 
 ## ------------------------------
 ## Server functionality
@@ -204,6 +204,7 @@ server <- function(input, output) {
   sampleMeans <- rowMeans(voltages)
   lineGraph <- reactiveValues(data=rowMeans(voltages))
   gpAve <- mean(sampleMeans)
+  gpAveR <- reactiveValues(data=mean(sampleMeans))
   
   maxMinList <- rowRanges(as.matrix(voltages))
   sampleRanges <- maxMinList[,2]-maxMinList[,1]
@@ -214,8 +215,13 @@ server <- function(input, output) {
   ucl <- gpAve + a2*rangeAve
   lcl <- gpAve - a2*rangeAve
   
+  a2R <- reactiveValues(data=a2)
+  uclR <- reactiveValues(data=ucl)
+  lclR <- reactiveValues(data=lcl)
+  
   #Determine the intervals for each zone. Store in a dataframe for easy reference later on
   zoneDistance <- (ucl - gpAve)/3
+  zoneDistanceR <- reactiveValues(data=zoneDistance)
   
   cZones <- c(gpAve + zoneDistance, gpAve - zoneDistance)
   bZones <- c(gpAve + 2*zoneDistance, gpAve - 2*zoneDistance)
@@ -223,29 +229,36 @@ server <- function(input, output) {
   
   zoneDf <- data.frame(cZones,bZones,aZones)
   colnames(zoneDf) <- c('C', 'B', 'A')
+  zoneDfR <- reactiveValues(data=zoneDf)
   
   #Recalculate our 'globals' in the event a new file was uploaded
   output$fileHelperHolder <- renderText({
-    inFile <- input$file1
+    inFile <- input$file2
     if (is.null(inFile)){
       return(NULL)
     }
+    
     #There is a file? Recalculate then
-    baseLineFile <- read.csv(inFile$datapath, header = input$header,
-             sep = input$sep, quote = input$quote)
-    baseLineData <- baseLineFile[,2]
+    baseLineData <- read.csv(inFile$datapath, header = TRUE, sep = ",")
     
     gpAve <- mean(baseLineData[,2])
     maxMinList <- range(baseLineData[,2])
     rangeAve <- maxMinList[2]-maxMinList[1]
+    
+    gpAveR$data <- gpAve
     
     #Calculate UCL and LCL
     a2 <- 0.729
     ucl <- gpAve + a2*rangeAve
     lcl <- gpAve - a2*rangeAve
     
+    a2R$data<-a2
+    uclR$data <-ucl
+    lclR$data <-lcl
+    
     #Determine the intervals for each zone. Store in a dataframe for easy reference later on
     zoneDistance <- (ucl - gpAve)/3
+    zoneDistanceR$data <- zoneDistance
     
     cZones <- c(gpAve + zoneDistance, gpAve - zoneDistance)
     bZones <- c(gpAve + 2*zoneDistance, gpAve - 2*zoneDistance)
@@ -253,12 +266,13 @@ server <- function(input, output) {
     
     zoneDf <- data.frame(cZones,bZones,aZones)
     colnames(zoneDf) <- c('C', 'B', 'A')
+    zoneDfR$data <- zoneDf
     
-    lineGraph$data <- ""
+    lineGraph$data <- gpAveR$data
+    loaded <<- TRUE  
     placeHolder <- ""
+    
   })
-  
-  
   
   #Render the SPC Chart
   output$SPCChart <- renderPlot({
@@ -268,33 +282,34 @@ server <- function(input, output) {
       
       #Plot X' with a clear centreline, dotted lines for each zone and a dashed line for UCL and LCL
       plot(lineGraph$data, type = "b", ylab = "Average of each sample", xlab = "Sample", xlim=c(xmin,length(lineGraph$data)),
-           ylim = c(min(min(lineGraph$data),lcl)-0.01,max(max(lineGraph$data),ucl)+0.01), xaxt='n', ann=FALSE)
+           ylim = c(min(min(lineGraph$data),lclR$data)-lclR$data/10,max(max(lineGraph$data),uclR$data)+uclR$data/10), xaxt='n', ann=FALSE)
       
       #Plot the centreline
-      abline(h=gpAve, lty=4, col="green")
-      text(xmin*7/10, gpAve, labels="Process Average")
+      abline(h=gpAveR$data, lty=4, col="green")
+      text(xmin*7/10, gpAveR$data, labels="Process Average")
       
       #Plot LCL and UCL
-      abline(h=lcl, lty=2, col="red")
-      text(xmin*7/10, lcl, labels="LCL", pos=1)
-      abline(h=ucl, lty=2, col="red")
-      text(xmin*7/10, ucl, labels="UCL", pos=3)
+      abline(h=lclR$data, lty=2, col="red")
+      text(xmin*7/10, lclR$data, labels="LCL", pos=1)
+      abline(h=uclR$data, lty=2, col="red")
+      text(xmin*7/10, uclR$data, labels="UCL", pos=3)
       
       #Plot the zones
-      abline(h=zoneDf$C[1], lty=3, col="blue")
-      abline(h=zoneDf$C[2], lty=3, col="blue")
+      abline(h=zoneDfR$data$C[1], lty=3, col="blue")
+      abline(h=zoneDfR$data$C[2], lty=3, col="blue")
       
-      abline(h=zoneDf$B[1], lty=3, col="blue")
-      abline(h=zoneDf$B[2], lty=3, col="blue")
+      abline(h=zoneDfR$data$B[1], lty=3, col="blue")
+      abline(h=zoneDfR$data$B[2], lty=3, col="blue")
       
-      text(xmin*7/10, gpAve + zoneDistance/2, labels="Zone C")
-      text(xmin*7/10, gpAve - zoneDistance/2, labels="Zone C")
+      text(xmin*7/10, gpAveR$data + zoneDistanceR$data/2, labels="Zone C")
+      text(xmin*7/10, gpAveR$data - zoneDistanceR$data, labels="Zone C")
       
-      text(xmin*7/10, gpAve + 1.5*zoneDistance, labels="Zone B")
-      text(xmin*7/10, gpAve - 1.5*zoneDistance, labels="Zone B")
+      text(xmin*7/10, gpAveR$data + 1.5*zoneDistanceR$data, labels="Zone B")
+      text(xmin*7/10, gpAveR$data - 1.5*zoneDistanceR$data, labels="Zone B")
       
-      text(xmin*7/10, gpAve + 2.5*zoneDistance, labels="Zone A")
-      text(xmin*7/10, gpAve - 2.5*zoneDistance, labels="Zone A")
+      text(xmin*7/10, gpAveR$data + 2.5*zoneDistanceR$data, labels="Zone A")
+      text(xmin*7/10, gpAveR$data - 2.5*zoneDistanceR$data, labels="Zone A")
+      loaded <<- TRUE
     }
   })
   
@@ -350,14 +365,9 @@ server <- function(input, output) {
   #"Clear Grand Process" button
   observeEvent(input$resetGrandProcessActionButton, {
     lineGraph$data <- NULL
-    loaded <<- FALSE
+    #loaded <<- FALSE
   })
   
-  #"Upload Good Class" button
-  observeEvent(input$uploadGoodClassActionButton, {
-    lineGraph$data <- NULL
-    loaded <<- FALSE
-  })
   
   #Render the DataTables
   output$tableView = DT::renderDataTable(
@@ -399,21 +409,22 @@ server <- function(input, output) {
     })
     
     #Check that a grand process is actually loaded
-    if (!loaded) {
-      output$errorLine <- renderUI({HTML(paste("No process is currently loaded.", "Navigate to the settings page to upload the baseline data.","","", sep = '<br/>'))})
-      output$bad <- renderText({""})
-      output$defPercentage <- renderText({""})
-      output$good <- renderText({""})
-      checkResults <- vector(mode="integer", length=7)
-      output$firstCheckDisplay <- renderText({""})
-      output$secondCheckDisplay <- renderText({""})
-      output$thirdCheckDisplay <- renderText({""})
-      output$fourthCheckDisplay <- renderText({""})
-      output$fifthCheckDisplay <- renderText({""})
-      output$sixthCheckDisplay <- renderText({""})
-      output$seventhCheckDisplay <- renderText({""})
-      return(NULL)
-    }
+    #if (!loaded) {
+    #if(length(lineGraph$data)){
+    #output$errorLine <- renderUI({HTML(paste("No process is currently loaded.", "Navigate to the settings page to upload the baseline data.","","", sep = '<br/>'))})
+    #output$bad <- renderText({""})
+    #output$defPercentage <- renderText({""})
+    #output$good <- renderText({""})
+    #checkResults <- vector(mode="integer", length=7)
+    #output$firstCheckDisplay <- renderText({""})
+    #output$secondCheckDisplay <- renderText({""})
+    #output$thirdCheckDisplay <- renderText({""})
+    #output$fourthCheckDisplay <- renderText({""})
+    #output$fifthCheckDisplay <- renderText({""})
+    #output$sixthCheckDisplay <- renderText({""})
+    #output$seventhCheckDisplay <- renderText({""})
+    #return(NULL)
+    #}
     
     inSample <- addedSample$data
     
@@ -448,13 +459,13 @@ server <- function(input, output) {
     
     #Run the checks
     checkResults <- vector(mode="integer", length=7)
-    checkResults[1] <- firstCheck(gpAve = gpAve, sampleMeans = lineGraph$data, zoneDf = zoneDf)
-    checkResults[2] <- secondCheck(gpAve = gpAve, sampleMeans = lineGraph$data, zoneDf = zoneDf)
-    checkResults[3] <- thirdCheck(gpAve = gpAve, sampleMeans = lineGraph$data, zoneDf = zoneDf)
-    checkResults[4] <- fourthCheck(gpAve = gpAve, sampleMeans = lineGraph$data, zoneDf = zoneDf)
-    checkResults[5] <- fifthCheck(gpAve = gpAve, sampleMeans = lineGraph$data, zoneDf = zoneDf)
-    checkResults[6] <- sixthCheck(gpAve = gpAve, sampleMeans = lineGraph$data, zoneDf = zoneDf)
-    checkResults[7] <- seventhCheck(gpAve = gpAve, sampleMeans = lineGraph$data, zoneDf = zoneDf)
+    checkResults[1] <- firstCheck(gpAve = gpAveR$data, sampleMeans = lineGraph$data, zoneDf = zoneDfR$data)
+    checkResults[2] <- secondCheck(gpAve = gpAveR$data, sampleMeans = lineGraph$data, zoneDf = zoneDfR$data)
+    checkResults[3] <- thirdCheck(gpAve = gpAveR$data, sampleMeans = lineGraph$data, zoneDf = zoneDfR$data)
+    checkResults[4] <- fourthCheck(gpAve = gpAveR$data, sampleMeans = lineGraph$data, zoneDf = zoneDfR$data)
+    checkResults[5] <- fifthCheck(gpAve = gpAveR$data, sampleMeans = lineGraph$data, zoneDf = zoneDfR$data)
+    checkResults[6] <- sixthCheck(gpAve = gpAveR$data, sampleMeans = lineGraph$data, zoneDf = zoneDfR$data)
+    checkResults[7] <- seventhCheck(gpAve = gpAveR$data, sampleMeans = lineGraph$data, zoneDf = zoneDfR$data)
     
     numberOfTriggers <- nnzero(checkResults)
     
